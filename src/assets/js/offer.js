@@ -7,6 +7,7 @@ const Offer = function(id, offername) {
   this.offername = offername;
   this.container = $('#' + id);
   this.prefix = 0;
+  this.isModified = true;
   this.init();
 }
 
@@ -19,9 +20,10 @@ Offer.prototype.init = function() {
                             </li>');
   offersContainer.append('<div class="tab-pane container-fluid px-0 py-2" id="' + self.id + '" role="tabpanel" data-prefix="' + self.prefix + '">\
                               <div class="offer-actions-bar mt-2 mb-3 p-3 d-flex border rounded">\
-                                <a href="javascript:" class="me-4"><i class="fa fa-save"></i> Save this offer</a>\
-                                <a href="javascript:" class="me-4"><i class="fa fa-file-word-o"></i> Generate docx</a>\
-                                <a href="javascript:" class="me-auto btn_gen_pdf"><i class="fa fa-file-pdf-o"></i> Generate pdf</a>\
+                                <a href="javascript:" class="me-4 btn_save_offer"><i class="fa fa-save"></i> Save this offer</a>\
+                                <a href="javascript:" class="me-4 btn_gen_doc"><i class="fa fa-file-word-o"></i> Generate docx</a>\
+                                <a href="javascript:" class="me-4 btn_gen_pdf"><i class="fa fa-file-pdf-o"></i> Generate pdf</a>\
+                                <a href="javascript:" class="me-auto btn_gen_secure"><i class="fa fa-file-zip-o"></i> Generate secure file</a>\
                                 <a href="javascript:" class="me-4"  data-bs-toggle="modal" data-bs-target="#setting-offer"><i class="fa fa-cog"></i> Setting</a>\
                                 <a href="javascript:" >Close</a>\
                               </div>\
@@ -124,9 +126,57 @@ Offer.prototype.init = function() {
       try {
         electron.savePdfDialog(self.getOfferData());
       } catch (e) {
-        console.log("Opening savedialog is failed. This is web mode.");
+        console.log("Opening save pdf dialog is failed. This is web mode.");
       }
     });
+
+    newContainer.find('a.btn_gen_doc').on('click', function(){
+      if(!newContainer.find('.item-block').length) {
+        return $.toast ({
+          heading : 'No items to generate doc',
+          text : 'Please create brands and items.',
+          icon : 'warning',
+          position : 'bottom-right'
+        });
+      }
+
+      // save dialog
+      try {
+        electron.saveDocDialog(self.getOfferData());
+      } catch (e) {
+        console.log("Opening savedialog is failed. This is web mode.");
+      }
+
+    });
+    
+    newContainer.find('a.btn_save_offer').on("click", function() {
+      try {
+        electron.saveOfferDialog(self.getOfferData());
+      } catch (e) {
+        console.log("Opening save offer dialog is failed. This is web mode.");
+      }
+    });
+
+
+    try {
+      electron.onObsSave(function(data) {
+        if(!data) return;
+        const { id, name } = data;
+        if(!id) return;
+        if(id == self.id) {
+          self.isModified = false;
+          offersHeader.find('a[href="#' + id + '"]').html(name);
+          return $.toast({
+            heading: 'Success.',
+            text: 'Offerbook script file is saved successfully.',
+            icon: 'success',
+            position: 'top-right',
+          });
+        }
+      });
+    } catch (e) {
+      console.log("This is not electron mode.");
+    }
     
 };
 
@@ -181,6 +231,5 @@ Offer.prototype.getOfferData = function() {
     });
     offerData.brands.push(brand);
   });
-  console.log(offerData);
   return offerData;
 };
